@@ -1,0 +1,61 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data files (scraped results - keep private!)
+ios_qa_pairs_*.csv
+ios_qa_pairs_*.json
+ios_qa_unique_*.csv
+ios_qa_unique_*.json
+ios_qa_firecrawl_*.csv
+ios_qa_firecrawl_*.json
+*_deduplicated.csv
+*_deduplicated.json
+
+# Optimized outputs
+ios_qa_optimized.*
+
+# Chrome debug profile
+chrome_profile/
+ChromeDebugProfile/
+
+# Database
+*.db
+scraper.db
+
+# Sensitive files
+medium_state.json
+*.log
+.env
+.env.local
+
+# Temporary
+*.tmp
+*.bak
+.cache/
+
+# URLs list
+urls_to_process.txt
+processed_urls.json
+
+# Terminals
+terminals/

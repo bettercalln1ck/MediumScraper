@@ -1,0 +1,19 @@
+{
+  "builds": [
+    {
+      "src": "simple_api.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "simple_api.py"
+    }
+  ],
+  "env": {
+    "GROQ_API_KEY": "@groq_api_key",
+    "FIRECRAWL_API_KEY": "@firecrawl_api_key"
+  }
+}
+
