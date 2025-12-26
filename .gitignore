@@ -47,6 +47,7 @@ medium_state.json
 *.log
 .env
 .env.local
+API_KEYS.txt
 
 # Temporary
 *.tmp
