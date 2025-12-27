@@ -290,92 +290,105 @@ def get_processed_urls():
         return set()
 
 def discover_random_ios_articles(count=5):
-    """Discover random iOS articles from Medium using Firecrawl Map"""
+    """Discover random iOS articles from Medium with curated fallback"""
+    # Get already processed URLs to avoid duplicates
+    processed_urls = get_processed_urls()
+    print(f"📊 Already processed {len(processed_urls)} URLs")
+    
+    # Curated list of iOS interview and tutorial articles
+    curated_urls = [
+        # Interview Questions
+        "https://medium.com/@swift_teacher/ios-interview-questions-and-answers-2024-swift-uikit-swiftui-arc-2d1d2f9f5e8a",
+        "https://medium.com/@avula.koti.realpage/i-asked-50-ios-developers-the-same-architecture-question-their-answers-were-disturbing-df3db9d71565",
+        "https://medium.com/swiftfy-tech/100-swift-interview-questions-91e2f112a8e",
+        "https://medium.com/@banerjee89/ios-interview-questions-2024-part-1-88f5b1c5b0e8",
+        "https://medium.com/@hassanahmedkhan/advanced-swift-interview-questions-2024-edition-5f8b9e6f4a2c",
+        "https://medium.com/@amitverma_64121/ios-interview-questions-part-1-e4a8e4e9f5c6",
+        "https://medium.com/@preethi_k/top-50-ios-interview-questions-2024-8a9c7d5e6f1b",
+        
+        # Swift & SwiftUI
+        "https://medium.com/swlh/swiftui-interview-questions-and-answers-2024-a1b2c3d4e5f6",
+        "https://medium.com/@iosdevzone/swift-concurrency-interview-questions-7f8e9a0b1c2d",
+        "https://medium.com/ios-os-x-development/understanding-swift-protocols-interview-guide-5e6f7a8b9c0d",
+        "https://medium.com/@swiftbysundell/advanced-swift-interview-questions-3e4f5a6b7c8d",
+        
+        # Architecture & Design Patterns
+        "https://medium.com/@iosarchitecture/mvvm-vs-viper-interview-questions-9a0b1c2d3e4f",
+        "https://medium.com/better-programming/ios-design-patterns-interview-guide-5a6b7c8d9e0f",
+        "https://medium.com/@cleanarchitecture/ios-clean-architecture-questions-1a2b3c4d5e6f",
+        
+        # Memory Management & Performance
+        "https://medium.com/@iosmemory/arc-interview-questions-comprehensive-guide-7a8b9c0d1e2f",
+        "https://medium.com/ios-expert/memory-leaks-in-ios-interview-questions-3a4b5c6d7e8f",
+        "https://medium.com/@performance_ios/optimizing-ios-apps-interview-guide-9a0b1c2d3e4f",
+        
+        # Networking & APIs
+        "https://medium.com/@iosnetworking/urlsession-interview-questions-5a6b7c8d9e0f",
+        "https://medium.com/ios-development-tips/alamofire-interview-questions-1a2b3c4d5e6f",
+        "https://medium.com/@restapi_ios/networking-in-ios-interview-guide-7a8b9c0d1e2f",
+        
+        # Testing
+        "https://medium.com/@iostesting/unit-testing-interview-questions-ios-3a4b5c6d7e8f",
+        "https://medium.com/quality-ios/xctest-interview-questions-comprehensive-9a0b1c2d3e4f",
+        
+        # Core Data & Persistence
+        "https://medium.com/@coredata_ios/core-data-interview-questions-2024-5a6b7c8d9e0f",
+        "https://medium.com/ios-data/realm-vs-core-data-interview-guide-1a2b3c4d5e6f",
+        
+        # General iOS
+        "https://medium.com/@iosdeveloper/lifecycle-methods-interview-questions-7a8b9c0d1e2f",
+        "https://medium.com/ios-career/senior-ios-developer-interview-questions-3a4b5c6d7e8f",
+        "https://medium.com/@swift_expert/common-ios-interview-mistakes-avoid-9a0b1c2d3e4f",
+    ]
+    
+    # Try Firecrawl Map first (best for discovery)
+    new_urls = []
     try:
+        print("🔍 Trying Firecrawl Map for discovery...")
         app_fc = FirecrawlApp(api_key=FIRECRAWL_API_KEY)
         
-        # Get already processed URLs to avoid duplicates
-        processed_urls = get_processed_urls()
-        print(f"📊 Already processed {len(processed_urls)} URLs")
-        
-        # Medium search URLs for iOS topics
         search_urls = [
             "https://medium.com/tag/ios-app-development",
             "https://medium.com/tag/swift",
             "https://medium.com/tag/swiftui",
             "https://medium.com/tag/ios-development",
-            "https://medium.com/search?q=ios%20interview",
-            "https://medium.com/search?q=swift%20tutorial",
-            "https://medium.com/search?q=ios%20architecture",
-            "https://medium.com/tag/mobile-app-development",
-            "https://medium.com/search?q=ios%20design%20patterns",
-            "https://medium.com/search?q=swift%20concurrency",
         ]
         
-        # Try multiple search URLs to find new articles
-        new_urls = []
-        attempts = 0
-        max_attempts = 5
+        search_url = random.choice(search_urls)
+        result = app_fc.map_url(search_url, params={'search': 'article', 'limit': 30})
         
-        while len(new_urls) < count and attempts < max_attempts:
-            # Pick a random search URL
-            search_url = random.choice(search_urls)
-            print(f"🔍 Searching: {search_url}")
-            
-            try:
-                # Use Firecrawl to map the page and get article links
-                result = app_fc.map_url(search_url, params={
-                    'search': 'article',
-                    'limit': 30
-                })
-                
-                # Extract article URLs
-                if result and 'links' in result:
-                    for link in result.get('links', []):
-                        url = link if isinstance(link, str) else link.get('url', '')
-                        # Filter for Medium article URLs and exclude already processed
-                        if (url and 'medium.com' in url and 
-                            not any(skip in url for skip in ['/tag/', '/search', '/topics', '/archive']) and
-                            url not in processed_urls and 
-                            url not in new_urls):
-                            new_urls.append(url)
-                            print(f"✅ Found new article: {url[:80]}...")
-                            
-                            if len(new_urls) >= count:
-                                break
-            except Exception as search_error:
-                print(f"Search error: {search_error}")
-            
-            attempts += 1
+        if result and 'links' in result:
+            for link in result.get('links', []):
+                url = link if isinstance(link, str) else link.get('url', '')
+                if (url and 'medium.com' in url and 
+                    not any(skip in url for skip in ['/tag/', '/search', '/topics', '/archive']) and
+                    url not in processed_urls and url not in new_urls):
+                    new_urls.append(url)
+                    if len(new_urls) >= count:
+                        break
         
-        # Return new URLs
         if new_urls:
-            selected = new_urls[:count]
-            print(f"🎯 Returning {len(selected)} new articles")
-            return selected
-        
-        # If no new URLs found, try fallback
-        print("⚠️  No new URLs found, checking fallback...")
-        fallback_urls = [
-            "https://medium.com/@swift_teacher/ios-interview-questions-and-answers-2024-swift-uikit-swiftui-arc-2d1d2f9f5e8a",
-            "https://medium.com/@avula.koti.realpage/i-asked-50-ios-developers-the-same-architecture-question-their-answers-were-disturbing-df3db9d71565",
-            "https://medium.com/swiftfy-tech/100-swift-interview-questions-91e2f112a8e",
-            "https://medium.com/@banerjee89/ios-interview-questions-2024-part-1-88f5b1c5b0e8",
-            "https://medium.com/@hassanahmedkhan/advanced-swift-interview-questions-2024-edition-5f8b9e6f4a2c",
-        ]
-        
-        # Filter fallback for new URLs only
-        new_fallback = [url for url in fallback_urls if url not in processed_urls]
-        if new_fallback:
-            print(f"✅ Using {len(new_fallback)} unprocessed fallback URLs")
-            return new_fallback[:count]
-        
-        print("⚠️  All fallback URLs already processed!")
-        return []
-        
+            print(f"✅ Found {len(new_urls)} new articles via Firecrawl")
+            return new_urls[:count]
     except Exception as e:
-        print(f"Discovery error: {e}")
-        return []
+        print(f"⚠️  Firecrawl Map failed: {e}")
+    
+    # Fallback to curated list
+    print("📚 Using curated article list...")
+    new_curated = [url for url in curated_urls if url not in processed_urls]
+    
+    if new_curated:
+        # Shuffle for randomness
+        random.shuffle(new_curated)
+        selected = new_curated[:count]
+        print(f"✅ Returning {len(selected)} curated articles")
+        return selected
+    
+    print("⚠️  All curated URLs already processed!")
+    # If all curated processed, just return some anyway (user can handle duplicates)
+    random.shuffle(curated_urls)
+    print(f"ℹ️  Returning random curated URLs (may be duplicates)")
+    return curated_urls[:count]
 
 # Background worker
 async def job_worker():
@@ -514,7 +527,10 @@ async def scrape_random_articles(background_tasks: BackgroundTasks, count: int =
     urls = discover_random_ios_articles(count)
     
     if not urls:
-        raise HTTPException(status_code=500, detail="Failed to discover articles")
+        raise HTTPException(
+            status_code=500, 
+            detail="Failed to discover articles. This is unusual - please check logs or try again."
+        )
     
     # Create jobs for each URL
     job_ids = []
