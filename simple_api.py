@@ -14,6 +14,7 @@ from contextlib import contextmanager
 from firecrawl import FirecrawlApp
 from groq import Groq
 import os
+import random
 
 # Configuration from environment
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "your-groq-api-key-here")
@@ -242,6 +243,62 @@ Q&A Pairs:"""
             ''', ('failed', str(e), datetime.now().isoformat(), job_id))
         processing_jobs[job_id] = {'status': 'failed', 'error': str(e)}
 
+# Random Article Discovery
+def discover_random_ios_articles(count=5):
+    """Discover random iOS articles from Medium using Firecrawl Map"""
+    try:
+        app_fc = FirecrawlApp(api_key=FIRECRAWL_API_KEY)
+        
+        # Medium search URLs for iOS topics
+        search_urls = [
+            "https://medium.com/tag/ios-app-development",
+            "https://medium.com/tag/swift",
+            "https://medium.com/tag/swiftui",
+            "https://medium.com/tag/ios-development",
+            "https://medium.com/search?q=ios%20interview",
+            "https://medium.com/search?q=swift%20tutorial",
+            "https://medium.com/search?q=ios%20architecture",
+        ]
+        
+        # Pick a random search URL
+        search_url = random.choice(search_urls)
+        
+        # Use Firecrawl to map the page and get article links
+        result = app_fc.map_url(search_url, params={
+            'search': 'article',
+            'limit': 20
+        })
+        
+        # Extract article URLs
+        urls = []
+        if result and 'links' in result:
+            for link in result.get('links', []):
+                url = link if isinstance(link, str) else link.get('url', '')
+                # Filter for Medium article URLs
+                if url and 'medium.com' in url and not any(skip in url for skip in ['/tag/', '/search', '/topics']):
+                    urls.append(url)
+        
+        # Return random selection
+        if urls:
+            return random.sample(urls, min(count, len(urls)))
+        
+        # Fallback: curated list of good iOS articles
+        fallback_urls = [
+            "https://medium.com/@swift_teacher/ios-interview-questions-and-answers-2024-swift-uikit-swiftui-arc-2d1d2f9f5e8a",
+            "https://medium.com/@avula.koti.realpage/i-asked-50-ios-developers-the-same-architecture-question-their-answers-were-disturbing-df3db9d71565",
+            "https://medium.com/swiftfy-tech/100-swift-interview-questions-91e2f112a8e",
+        ]
+        return random.sample(fallback_urls, min(count, len(fallback_urls)))
+        
+    except Exception as e:
+        print(f"Discovery error: {e}")
+        # Return fallback URLs on error
+        fallback_urls = [
+            "https://medium.com/@swift_teacher/ios-interview-questions-and-answers-2024-swift-uikit-swiftui-arc-2d1d2f9f5e8a",
+            "https://medium.com/@avula.koti.realpage/i-asked-50-ios-developers-the-same-architecture-question-their-answers-were-disturbing-df3db9d71565",
+        ]
+        return random.sample(fallback_urls, min(count, len(fallback_urls)))
+
 # Background worker
 async def job_worker():
     """Simple background worker"""
@@ -336,6 +393,61 @@ async def submit_scrape(submission: UrlSubmission, background_tasks: BackgroundT
         status="queued",
         message="Job submitted successfully"
     )
+
+@app.post("/api/scrape/random")
+async def scrape_random_articles(background_tasks: BackgroundTasks, count: int = 1):
+    """
+    Discover and scrape random iOS articles from Medium
+    
+    - **count**: Number of random articles to scrape (1-10, default: 1)
+    """
+    import uuid
+    
+    # Validate count
+    count = max(1, min(count, 10))
+    
+    # Discover random articles
+    urls = discover_random_ios_articles(count)
+    
+    if not urls:
+        raise HTTPException(status_code=500, detail="Failed to discover articles")
+    
+    # Create jobs for each URL
+    job_ids = []
+    for url in urls:
+        job_id = str(uuid.uuid4())
+        
+        # Create job
+        with get_db() as conn:
+            conn.execute('''
+                INSERT INTO jobs (id, url, status, created_at)
+                VALUES (?, ?, ?, ?)
+            ''', (job_id, url, 'queued', datetime.now().isoformat()))
+        
+        # Queue job
+        await job_queue.put((job_id, url))
+        job_ids.append({"job_id": job_id, "url": url})
+    
+    return {
+        "message": f"Submitted {len(job_ids)} random articles for scraping",
+        "jobs": job_ids
+    }
+
+@app.get("/api/discover")
+async def discover_articles(count: int = 5):
+    """
+    Discover random iOS articles without scraping
+    
+    - **count**: Number of articles to discover (1-20, default: 5)
+    """
+    count = max(1, min(count, 20))
+    urls = discover_random_ios_articles(count)
+    
+    return {
+        "count": len(urls),
+        "urls": urls,
+        "message": "Use POST /api/scrape with these URLs to extract Q&A"
+    }
 
 @app.get("/api/jobs/{job_id}")
 async def get_job_status(job_id: str):
