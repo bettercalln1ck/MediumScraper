@@ -138,25 +138,43 @@ async def process_job(job_id: str, url: str):
             model="llama-3.3-70b-versatile",
             messages=[{
                 "role": "user",
-                "content": f"""Extract iOS/Swift interview questions from this article.
+                "content": f"""Extract iOS/Swift interview questions and answers from this article. Be thorough and intelligent in finding answers.
 
-Format:
+ANSWER EXTRACTION RULES:
+1. Look for EXPLICIT answers (direct Q&A format)
+2. Look for IMPLICIT answers (discussions, explanations, context about the topic)
+3. If a question is asked, search the ENTIRE article for related information
+4. Summarize relevant paragraphs as answers
+5. Extract code examples or technical explanations as answers
+6. If discussing a concept, that discussion IS the answer
+7. Only use "Answer not provided" if there's truly NO relevant information
+
+FORMAT:
 Q: [question]
-A: [answer if available, otherwise "Answer not provided"]
+A: [answer - can be a summary, explanation, or discussion from the article]
 
-Rules:
-- ONLY iOS/Swift/SwiftUI/Apple content
-- Include questions even without answers
-- If NO iOS questions found, return "NO_IOS_QA"
+CONTENT TYPES TO EXTRACT:
+- Interview questions with answers
+- Technical questions with explanations
+- Conceptual questions with discussions
+- Architecture/design questions with reasoning
+- Best practices with explanations
+- Common mistakes with solutions
+
+QUALITY RULES:
+- ONLY iOS/Swift/SwiftUI/UIKit/Xcode/Apple platform content
+- Answers should be 1-3 sentences (concise but complete)
+- Include code snippets if relevant
+- If NO iOS questions found at all, return "NO_IOS_QA"
 
 Article:
 {content}
 
 Q&A Pairs:"""
             }],
-            temperature=0,
-            max_tokens=2500,
-            timeout=20
+            temperature=0.3,
+            max_tokens=3000,
+            timeout=30
         )
         
         result_text = response.choices[0].message.content.strip()
