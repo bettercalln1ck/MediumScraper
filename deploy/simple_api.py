@@ -23,8 +23,43 @@ DATABASE_PATH = os.getenv("DATABASE_PATH", "scraper.db")
 
 app = FastAPI(
     title="iOS Q&A Scraper API",
-    description="Free API for scraping iOS interview questions from Medium",
-    version="1.0.0"
+    description="""
+# 🚀 iOS Interview Q&A Scraper
+
+**Automatically scrape and extract iOS/Swift interview questions and answers from Medium articles.**
+
+## Features
+
+✅ **Smart AI Extraction** - Uses Groq AI to intelligently extract Q&A pairs  
+✅ **Random Discovery** - Automatically find new iOS articles on Medium  
+✅ **Firecrawl Powered** - Reliable content scraping that bypasses paywalls  
+✅ **Real-time Status** - Track job progress with live updates  
+✅ **Deduplication** - Prevents duplicate questions  
+✅ **Free Tier** - Deploy on free hosting platforms  
+
+## Quick Start
+
+1. **Discover Articles**: `GET /api/discover?count=5`
+2. **Scrape Random**: `POST /api/scrape/random?count=3`
+3. **Scrape Specific**: `POST /api/scrape` with URL
+4. **Check Status**: `GET /api/jobs/{job_id}`
+5. **Get Results**: `GET /api/jobs/{job_id}/results`
+
+## API Keys Required
+
+- **Groq API Key**: Get free at https://console.groq.com
+- **Firecrawl API Key**: Get free at https://firecrawl.dev
+
+Set as environment variables: `GROQ_API_KEY` and `FIRECRAWL_API_KEY`
+    """,
+    version="2.0.0",
+    contact={
+        "name": "MediumScraper on GitHub",
+        "url": "https://github.com/bettercalln1ck/MediumScraper",
+    },
+    license_info={
+        "name": "MIT",
+    },
 )
 
 # Simple in-memory job queue
@@ -123,7 +158,8 @@ async def process_job(job_id: str, url: str):
         if not result or 'markdown' not in result:
             raise Exception("Failed to scrape or no content returned")
         
-        content = result.get('markdown', '') or result.get('content', '')
+        # Extract content from Firecrawl result (dictionary)
+        content = result.get('markdown') or result.get('content') or ''
         
         if not content:
             raise Exception("No content extracted")
@@ -312,9 +348,13 @@ async def startup_event():
     asyncio.create_task(job_worker())
 
 # API Endpoints
-@app.get("/", response_class=HTMLResponse)
+@app.get("/", response_class=HTMLResponse, tags=["System"])
 async def home():
-    """Landing page"""
+    """
+    ## 🏠 Landing Page
+    
+    HTML welcome page with API overview and quick links.
+    """
     return """
     <!DOCTYPE html>
     <html>
@@ -371,9 +411,20 @@ curl -X POST https://your-api.com/api/scrape \\
     </html>
     """
 
-@app.post("/api/scrape", response_model=JobResponse)
+@app.post("/api/scrape", response_model=JobResponse, tags=["Scraping"])
 async def submit_scrape(submission: UrlSubmission, background_tasks: BackgroundTasks):
-    """Submit a URL for scraping"""
+    """
+    ## Submit a Medium URL for Q&A Extraction
+    
+    Scrape a specific Medium article and extract iOS interview Q&A pairs.
+    
+    **Example URL:**
+    ```
+    https://medium.com/@user/ios-interview-questions-guide
+    ```
+    
+    **Returns:** Job ID to track the scraping progress
+    """
     import uuid
     job_id = str(uuid.uuid4())
     
@@ -393,12 +444,23 @@ async def submit_scrape(submission: UrlSubmission, background_tasks: BackgroundT
         message="Job submitted successfully"
     )
 
-@app.post("/api/scrape/random")
+@app.post("/api/scrape/random", tags=["Scraping", "Discovery"])
 async def scrape_random_articles(background_tasks: BackgroundTasks, count: int = 1):
     """
-    Discover and scrape random iOS articles from Medium
+    ## 🎲 Discover and Scrape Random iOS Articles
     
-    - **count**: Number of random articles to scrape (1-10, default: 1)
+    Automatically finds random iOS/Swift articles on Medium and extracts Q&A.
+    
+    **Parameters:**
+    - **count**: Number of articles (1-10, default: 1)
+    
+    **How it works:**
+    1. Searches Medium for iOS/Swift content
+    2. Picks random articles
+    3. Queues them for scraping
+    4. Returns job IDs to track progress
+    
+    **Example:** `POST /api/scrape/random?count=3`
     """
     import uuid
     
@@ -432,12 +494,21 @@ async def scrape_random_articles(background_tasks: BackgroundTasks, count: int =
         "jobs": job_ids
     }
 
-@app.get("/api/discover")
+@app.get("/api/discover", tags=["Discovery"])
 async def discover_articles(count: int = 5):
     """
-    Discover random iOS articles without scraping
+    ## 🔍 Discover iOS Articles (Preview Only)
     
-    - **count**: Number of articles to discover (1-20, default: 5)
+    Find random iOS/Swift articles on Medium **without** scraping them.
+    
+    Use this to preview what articles are available before scraping.
+    
+    **Parameters:**
+    - **count**: Number of articles to find (1-20, default: 5)
+    
+    **Returns:** List of Medium article URLs
+    
+    **Example:** `GET /api/discover?count=10`
     """
     count = max(1, min(count, 20))
     urls = discover_random_ios_articles(count)
@@ -448,9 +519,21 @@ async def discover_articles(count: int = 5):
         "message": "Use POST /api/scrape with these URLs to extract Q&A"
     }
 
-@app.get("/api/jobs/{job_id}")
+@app.get("/api/jobs/{job_id}", tags=["Jobs"])
 async def get_job_status(job_id: str):
-    """Get job status"""
+    """
+    ## 📊 Check Job Status
+    
+    Get the current status of a scraping job.
+    
+    **Statuses:**
+    - `queued` - Waiting to start
+    - `processing` - Currently scraping
+    - `completed` - Finished successfully
+    - `failed` - Error occurred
+    
+    **Returns:** Job details including status, Q&A count, and errors (if any)
+    """
     with get_db() as conn:
         row = conn.execute('SELECT * FROM jobs WHERE id = ?', (job_id,)).fetchone()
         
@@ -459,9 +542,21 @@ async def get_job_status(job_id: str):
         
         return dict(row)
 
-@app.get("/api/jobs/{job_id}/results")
+@app.get("/api/jobs/{job_id}/results", tags=["Jobs", "Q&A"])
 async def get_job_results(job_id: str):
-    """Get Q&A results"""
+    """
+    ## 📋 Get Extracted Q&A Pairs
+    
+    Retrieve all the questions and answers extracted from a job.
+    
+    **Returns:** Array of Q&A objects containing:
+    - `question` - The interview question
+    - `answer` - Extracted answer (or context from article)
+    - `source_url` - Original Medium article URL
+    - `timestamp` - When it was extracted
+    
+    **Note:** Only available for completed jobs
+    """
     with get_db() as conn:
         rows = conn.execute('''
             SELECT question, answer, source_url, timestamp 
@@ -470,9 +565,24 @@ async def get_job_results(job_id: str):
         
         return [dict(row) for row in rows]
 
-@app.get("/api/qa")
+@app.get("/api/qa", tags=["Q&A"])
 async def get_all_qa(limit: int = 50, offset: int = 0):
-    """Get all Q&A pairs"""
+    """
+    ## 📚 Get All Q&A Pairs (Master Database)
+    
+    Retrieve all collected iOS interview Q&A pairs from the database.
+    
+    **Parameters:**
+    - `limit` - Number of results per page (default: 50)
+    - `offset` - Pagination offset (default: 0)
+    
+    **Returns:** 
+    - Array of all Q&A pairs across all scraped articles
+    - Total count
+    - Pagination info
+    
+    **Example:** `GET /api/qa?limit=100&offset=0`
+    """
     with get_db() as conn:
         rows = conn.execute('''
             SELECT question, answer, source_url, timestamp 
@@ -483,9 +593,22 @@ async def get_all_qa(limit: int = 50, offset: int = 0):
         
         return [dict(row) for row in rows]
 
-@app.get("/api/stats")
+@app.get("/api/stats", tags=["System"])
 async def get_stats():
-    """Get statistics"""
+    """
+    ## 📈 System Statistics
+    
+    Get overview statistics about the scraping system.
+    
+    **Returns:**
+    - Total jobs processed
+    - Success/failure counts
+    - Total Q&A pairs collected
+    - Unique articles scraped
+    - System health
+    
+    **Example:** `GET /api/stats`
+    """
     with get_db() as conn:
         total_qa = conn.execute('SELECT COUNT(*) FROM qa_pairs').fetchone()[0]
         total_jobs = conn.execute('SELECT COUNT(*) FROM jobs').fetchone()[0]
@@ -498,9 +621,17 @@ async def get_stats():
             'queue_size': job_queue.qsize()
         }
 
-@app.get("/health")
+@app.get("/health", tags=["System"])
 async def health_check():
-    """Health check"""
+    """
+    ## 💚 Health Check
+    
+    Simple endpoint to check if the API is running.
+    
+    **Returns:** `{"status": "healthy"}`
+    
+    **Use for:** Monitoring, uptime checks, deployment verification
+    """
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
 if __name__ == "__main__":
