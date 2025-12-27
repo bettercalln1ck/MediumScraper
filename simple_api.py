@@ -248,7 +248,8 @@ Q&A Pairs:"""
         try:
             print("🔷 Trying Google Gemini...")
             genai.configure(api_key=GEMINI_API_KEY)
-            model = genai.GenerativeModel('gemini-pro')
+            # Use gemini-1.5-flash-latest (free tier, fast, reliable)
+            model = genai.GenerativeModel('gemini-1.5-flash-latest')
             response = model.generate_content(prompt)
             result = response.text.strip()
             print("✅ Gemini succeeded!")
