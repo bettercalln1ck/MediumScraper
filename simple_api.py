@@ -248,12 +248,20 @@ Q&A Pairs:"""
         try:
             print("🔷 Trying Google Gemini...")
             genai.configure(api_key=GEMINI_API_KEY)
-            # Use gemini-1.5-flash-latest (free tier, fast, reliable)
-            model = genai.GenerativeModel('gemini-1.5-flash-latest')
-            response = model.generate_content(prompt)
-            result = response.text.strip()
-            print("✅ Gemini succeeded!")
-            return result, "gemini"
+            # Try multiple model names (Google keeps changing them!)
+            for model_name in ['gemini-1.5-flash', 'gemini-pro', 'gemini-1.0-pro']:
+                try:
+                    print(f"   Trying model: {model_name}...")
+                    model = genai.GenerativeModel(model_name)
+                    response = model.generate_content(prompt)
+                    result = response.text.strip()
+                    print(f"✅ Gemini succeeded with model: {model_name}!")
+                    return result, "gemini"
+                except Exception as model_error:
+                    print(f"   {model_name} failed: {str(model_error)[:100]}")
+                    continue
+            # If all models failed, raise the last error
+            raise Exception("All Gemini model names failed")
         except Exception as e:
             error_msg = str(e)
             errors.append(f"Gemini: {error_msg[:100]}")
