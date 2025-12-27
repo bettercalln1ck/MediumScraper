@@ -39,7 +39,7 @@ https://app.koyeb.com
 
 ```
 Name: GEMINI_API_KEY
-Value: AIzaSyA9NgwFaH56jyqynqgV7FYskrvDS9iq66g
+Value: (your Gemini API key from API_KEYS.txt)
 ```
 
 Click **"Add"** or **"Save"**
@@ -174,7 +174,7 @@ Now you'll have **three layers** of protection!
 
 **Your Gemini API Key:**
 ```
-AIzaSyA9NgwFaH56jyqynqgV7FYskrvDS9iq66g
+(Get from your local API_KEYS.txt file)
 ```
 
 **Add it to Koyeb now!**
