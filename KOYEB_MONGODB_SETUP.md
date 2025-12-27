@@ -20,9 +20,9 @@ Your MongoDB connection string is configured and ready to use.
 2. Click **Add variable**
 3. Fill in:
    - **Name:** `MONGODB_URI`
-   - **Value:** 
+   - **Value:** `(Get from your API_KEYS.txt file - DO NOT paste credentials here)`
      ```
-     mongodb+srv://nikhilkmr6303_db_user:i020PP2CRHKhLtwo@cluster0.kyaetao.mongodb.net/medium_scraper?retryWrites=true&w=majority&appName=Cluster0
+     mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/medium_scraper?retryWrites=true&w=majority&appName=Cluster0
      ```
 4. Click **Save**
 5. Click **Deploy** to redeploy with MongoDB
@@ -75,8 +75,9 @@ curl https://misleading-aile-personalnikhil-27cb1e20.koyeb.app/api/stats
 
 **Connection String:**
 ```
-mongodb+srv://nikhilkmr6303_db_user:i020PP2CRHKhLtwo@cluster0.kyaetao.mongodb.net/medium_scraper?retryWrites=true&w=majority&appName=Cluster0
+mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/medium_scraper?retryWrites=true&w=majority&appName=Cluster0
 ```
+(Get your actual connection string from API_KEYS.txt)
 
 **Database Name:** `medium_scraper`  
 **Collections:** `jobs`, `qa_pairs`  
@@ -103,8 +104,8 @@ Access your data anytime at:
 Want to test MongoDB locally before deploying?
 
 ```bash
-# Set environment variable
-export MONGODB_URI="mongodb+srv://nikhilkmr6303_db_user:i020PP2CRHKhLtwo@cluster0.kyaetao.mongodb.net/medium_scraper?retryWrites=true&w=majority&appName=Cluster0"
+# Set environment variable (get from API_KEYS.txt)
+export MONGODB_URI="mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/medium_scraper?retryWrites=true&w=majority&appName=Cluster0"
 
 # Test connection
 python3 database_mongo.py

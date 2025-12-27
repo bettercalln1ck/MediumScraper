@@ -20,6 +20,20 @@ import random
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "your-groq-api-key-here")
 FIRECRAWL_API_KEY = os.getenv("FIRECRAWL_API_KEY", "your-firecrawl-api-key-here")
 DATABASE_PATH = os.getenv("DATABASE_PATH", "scraper.db")
+MONGODB_URI = os.getenv("MONGODB_URI", "")
+
+# Determine which database to use
+USE_MONGODB = bool(MONGODB_URI and MONGODB_URI != "")
+
+if USE_MONGODB:
+    try:
+        from pymongo import MongoClient, ASCENDING, DESCENDING
+        print("✅ MongoDB enabled - data will persist!")
+    except ImportError:
+        print("⚠️  pymongo not installed, falling back to SQLite")
+        USE_MONGODB = False
+else:
+    print("ℹ️  Using SQLite (data will reset on redeploy)")
 
 app = FastAPI(
     title="iOS Q&A Scraper API",
