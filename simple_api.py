@@ -122,11 +122,8 @@ async def process_job(job_id: str, url: str):
         if not result or 'markdown' not in result:
             raise Exception("Failed to scrape or no content returned")
         
-        content = None
-        if hasattr(result, 'markdown'):
-            content = result.markdown
-        elif hasattr(result, 'content'):
-            content = result.content
+        # Extract content from Firecrawl result (dictionary)
+        content = result.get('markdown') or result.get('content') or ''
         
         if not content:
             raise Exception("No content extracted")
