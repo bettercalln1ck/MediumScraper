@@ -1,7 +1,10 @@
 fastapi==0.109.0
 uvicorn[standard]==0.27.0
-firecrawl-py==4.12.0
+firecrawl-py==0.0.16
 groq>=0.11.0
 pydantic==2.5.3
+pydantic-core==2.14.6
 python-multipart==0.0.6
+pymongo==4.6.1
+dnspython==2.4.2
 
