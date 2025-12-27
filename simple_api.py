@@ -16,8 +16,25 @@ from groq import Groq
 import os
 import random
 
+# Import AI SDKs (will be installed via requirements.txt)
+try:
+    import google.generativeai as genai
+    GEMINI_AVAILABLE = True
+except ImportError:
+    GEMINI_AVAILABLE = False
+    print("⚠️  Google Gemini SDK not installed")
+
+try:
+    import requests
+    HUGGINGFACE_AVAILABLE = True
+except ImportError:
+    HUGGINGFACE_AVAILABLE = False
+    print("⚠️  Requests library not installed for Hugging Face")
+
 # Configuration from environment
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "your-groq-api-key-here")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "your-gemini-api-key-here")
+HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY", "your-hf-api-key-here")
 FIRECRAWL_API_KEY = os.getenv("FIRECRAWL_API_KEY", "your-firecrawl-api-key-here")
 DATABASE_PATH = os.getenv("DATABASE_PATH", "scraper.db")
 MONGODB_URI = os.getenv("MONGODB_URI", "")
@@ -44,7 +61,8 @@ app = FastAPI(
 
 ## Features
 
-✅ **Smart AI Extraction** - Uses Groq AI to intelligently extract Q&A pairs  
+✅ **Multi-AI Fallback** - Groq → Gemini → Hugging Face (never fails!)  
+✅ **Smart AI Extraction** - Intelligently extract Q&A pairs from articles  
 ✅ **Random Discovery** - Automatically find new iOS articles on Medium  
 ✅ **Firecrawl Powered** - Reliable content scraping that bypasses paywalls  
 ✅ **Real-time Status** - Track job progress with live updates  
@@ -61,10 +79,15 @@ app = FastAPI(
 
 ## API Keys Required
 
+**Primary (Required):**
 - **Groq API Key**: Get free at https://console.groq.com
 - **Firecrawl API Key**: Get free at https://firecrawl.dev
 
-Set as environment variables: `GROQ_API_KEY` and `FIRECRAWL_API_KEY`
+**Backup (Recommended for 10x capacity):**
+- **Gemini API Key**: Get free at https://aistudio.google.com/app/apikey
+- **Hugging Face Token**: Get free at https://huggingface.co/settings/tokens
+
+Set as environment variables: `GROQ_API_KEY`, `FIRECRAWL_API_KEY`, `GEMINI_API_KEY`, `HUGGINGFACE_API_KEY`
     """,
     version="2.0.0",
     contact={
@@ -156,39 +179,12 @@ def is_duplicate(question, threshold=0.7):
                 return True
     return False
 
-async def process_job(job_id: str, url: str):
-    """Process a scraping job"""
-    try:
-        # Update status
-        with get_db() as conn:
-            conn.execute('UPDATE jobs SET status = ? WHERE id = ?', ('processing', job_id))
-        
-        processing_jobs[job_id] = {'status': 'processing', 'progress': 0}
-        
-        # Scrape with Firecrawl
-        app_fc = FirecrawlApp(api_key=FIRECRAWL_API_KEY)
-        result = app_fc.scrape_url(url, params={'formats': ['markdown']})
-        
-        if not result or 'markdown' not in result:
-            raise Exception("Failed to scrape or no content returned")
-        
-        # Extract content from Firecrawl result (dictionary)
-        content = result.get('markdown') or result.get('content') or ''
-        
-        if not content:
-            raise Exception("No content extracted")
-        
-        processing_jobs[job_id]['progress'] = 50
-        
-        # Extract Q&A with AI
-        content = content[:15000]
-        client = Groq(api_key=GROQ_API_KEY)
-        
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{
-                "role": "user",
-                "content": f"""Extract iOS/Swift interview questions and answers from this article. Be thorough and intelligent in finding answers.
+def extract_qa_with_ai(content: str):
+    """
+    Multi-AI fallback system for Q&A extraction
+    Tries: Groq → Gemini → Hugging Face
+    """
+    prompt = f"""Extract iOS/Swift interview questions and answers from this article. Be thorough and intelligent in finding answers.
 
 ANSWER EXTRACTION RULES:
 1. Look for EXPLICIT answers (direct Q&A format)
@@ -221,13 +217,107 @@ Article:
 {content}
 
 Q&A Pairs:"""
-            }],
+    
+    errors = []
+    
+    # Try 1: Groq (Primary - Fastest, Best Quality)
+    try:
+        print("🚀 Trying Groq AI...")
+        client = Groq(api_key=GROQ_API_KEY)
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
             max_tokens=3000,
             timeout=30
         )
+        result = response.choices[0].message.content.strip()
+        print("✅ Groq succeeded!")
+        return result, "groq"
+    except Exception as e:
+        error_msg = str(e)
+        errors.append(f"Groq: {error_msg[:100]}")
+        print(f"❌ Groq failed: {error_msg[:100]}")
         
-        result_text = response.choices[0].message.content.strip()
+        # Check if it's a rate limit error
+        if "rate limit" in error_msg.lower() or "429" in error_msg:
+            print("⚠️  Groq rate limited, trying Gemini...")
+    
+    # Try 2: Google Gemini (Backup - More capacity, high quality)
+    if GEMINI_AVAILABLE and GEMINI_API_KEY and GEMINI_API_KEY != "your-gemini-api-key-here":
+        try:
+            print("🔷 Trying Google Gemini...")
+            genai.configure(api_key=GEMINI_API_KEY)
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            response = model.generate_content(prompt)
+            result = response.text.strip()
+            print("✅ Gemini succeeded!")
+            return result, "gemini"
+        except Exception as e:
+            error_msg = str(e)
+            errors.append(f"Gemini: {error_msg[:100]}")
+            print(f"❌ Gemini failed: {error_msg[:100]}")
+    
+    # Try 3: Hugging Face (Final backup)
+    if HUGGINGFACE_AVAILABLE and HUGGINGFACE_API_KEY and HUGGINGFACE_API_KEY != "your-hf-api-key-here":
+        try:
+            print("🤗 Trying Hugging Face...")
+            headers = {"Authorization": f"Bearer {HUGGINGFACE_API_KEY}"}
+            payload = {
+                "inputs": prompt,
+                "parameters": {"max_new_tokens": 2000, "temperature": 0.3}
+            }
+            response = requests.post(
+                "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2",
+                headers=headers,
+                json=payload,
+                timeout=60
+            )
+            
+            if response.status_code == 200:
+                result = response.json()[0]['generated_text'].strip()
+                print("✅ Hugging Face succeeded!")
+                return result, "huggingface"
+            else:
+                errors.append(f"HuggingFace: HTTP {response.status_code}")
+                print(f"❌ Hugging Face failed: HTTP {response.status_code}")
+        except Exception as e:
+            error_msg = str(e)
+            errors.append(f"HuggingFace: {error_msg[:100]}")
+            print(f"❌ Hugging Face failed: {error_msg[:100]}")
+    
+    # All AI providers failed
+    raise Exception(f"All AI providers failed: {' | '.join(errors)}")
+
+async def process_job(job_id: str, url: str):
+    """Process a scraping job"""
+    try:
+        # Update status
+        with get_db() as conn:
+            conn.execute('UPDATE jobs SET status = ? WHERE id = ?', ('processing', job_id))
+        
+        processing_jobs[job_id] = {'status': 'processing', 'progress': 0}
+        
+        # Scrape with Firecrawl
+        app_fc = FirecrawlApp(api_key=FIRECRAWL_API_KEY)
+        result = app_fc.scrape_url(url, params={'formats': ['markdown']})
+        
+        if not result or 'markdown' not in result:
+            raise Exception("Failed to scrape or no content returned")
+        
+        # Extract content from Firecrawl result (dictionary)
+        content = result.get('markdown') or result.get('content') or ''
+        
+        if not content:
+            raise Exception("No content extracted")
+        
+        processing_jobs[job_id]['progress'] = 50
+        
+        # Extract Q&A with AI (with fallback)
+        content = content[:15000]
+        result_text, ai_provider = extract_qa_with_ai(content)
+        
+        print(f"✅ Used AI provider: {ai_provider}")
         
         if "NO_IOS_QA" in result_text:
             with get_db() as conn:
