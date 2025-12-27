@@ -279,10 +279,24 @@ Q&A Pairs:"""
         processing_jobs[job_id] = {'status': 'failed', 'error': str(e)}
 
 # Random Article Discovery
+def get_processed_urls():
+    """Get all URLs that have already been processed"""
+    try:
+        with get_db() as conn:
+            rows = conn.execute('SELECT DISTINCT url FROM jobs WHERE status = "completed"').fetchall()
+            return set(row[0] for row in rows)
+    except Exception as e:
+        print(f"Error fetching processed URLs: {e}")
+        return set()
+
 def discover_random_ios_articles(count=5):
     """Discover random iOS articles from Medium using Firecrawl Map"""
     try:
         app_fc = FirecrawlApp(api_key=FIRECRAWL_API_KEY)
+        
+        # Get already processed URLs to avoid duplicates
+        processed_urls = get_processed_urls()
+        print(f"📊 Already processed {len(processed_urls)} URLs")
         
         # Medium search URLs for iOS topics
         search_urls = [
@@ -293,46 +307,75 @@ def discover_random_ios_articles(count=5):
             "https://medium.com/search?q=ios%20interview",
             "https://medium.com/search?q=swift%20tutorial",
             "https://medium.com/search?q=ios%20architecture",
+            "https://medium.com/tag/mobile-app-development",
+            "https://medium.com/search?q=ios%20design%20patterns",
+            "https://medium.com/search?q=swift%20concurrency",
         ]
         
-        # Pick a random search URL
-        search_url = random.choice(search_urls)
+        # Try multiple search URLs to find new articles
+        new_urls = []
+        attempts = 0
+        max_attempts = 5
         
-        # Use Firecrawl to map the page and get article links
-        result = app_fc.map_url(search_url, params={
-            'search': 'article',
-            'limit': 20
-        })
+        while len(new_urls) < count and attempts < max_attempts:
+            # Pick a random search URL
+            search_url = random.choice(search_urls)
+            print(f"🔍 Searching: {search_url}")
+            
+            try:
+                # Use Firecrawl to map the page and get article links
+                result = app_fc.map_url(search_url, params={
+                    'search': 'article',
+                    'limit': 30
+                })
+                
+                # Extract article URLs
+                if result and 'links' in result:
+                    for link in result.get('links', []):
+                        url = link if isinstance(link, str) else link.get('url', '')
+                        # Filter for Medium article URLs and exclude already processed
+                        if (url and 'medium.com' in url and 
+                            not any(skip in url for skip in ['/tag/', '/search', '/topics', '/archive']) and
+                            url not in processed_urls and 
+                            url not in new_urls):
+                            new_urls.append(url)
+                            print(f"✅ Found new article: {url[:80]}...")
+                            
+                            if len(new_urls) >= count:
+                                break
+            except Exception as search_error:
+                print(f"Search error: {search_error}")
+            
+            attempts += 1
         
-        # Extract article URLs
-        urls = []
-        if result and 'links' in result:
-            for link in result.get('links', []):
-                url = link if isinstance(link, str) else link.get('url', '')
-                # Filter for Medium article URLs
-                if url and 'medium.com' in url and not any(skip in url for skip in ['/tag/', '/search', '/topics']):
-                    urls.append(url)
+        # Return new URLs
+        if new_urls:
+            selected = new_urls[:count]
+            print(f"🎯 Returning {len(selected)} new articles")
+            return selected
         
-        # Return random selection
-        if urls:
-            return random.sample(urls, min(count, len(urls)))
-        
-        # Fallback: curated list of good iOS articles
+        # If no new URLs found, try fallback
+        print("⚠️  No new URLs found, checking fallback...")
         fallback_urls = [
             "https://medium.com/@swift_teacher/ios-interview-questions-and-answers-2024-swift-uikit-swiftui-arc-2d1d2f9f5e8a",
             "https://medium.com/@avula.koti.realpage/i-asked-50-ios-developers-the-same-architecture-question-their-answers-were-disturbing-df3db9d71565",
             "https://medium.com/swiftfy-tech/100-swift-interview-questions-91e2f112a8e",
+            "https://medium.com/@banerjee89/ios-interview-questions-2024-part-1-88f5b1c5b0e8",
+            "https://medium.com/@hassanahmedkhan/advanced-swift-interview-questions-2024-edition-5f8b9e6f4a2c",
         ]
-        return random.sample(fallback_urls, min(count, len(fallback_urls)))
+        
+        # Filter fallback for new URLs only
+        new_fallback = [url for url in fallback_urls if url not in processed_urls]
+        if new_fallback:
+            print(f"✅ Using {len(new_fallback)} unprocessed fallback URLs")
+            return new_fallback[:count]
+        
+        print("⚠️  All fallback URLs already processed!")
+        return []
         
     except Exception as e:
         print(f"Discovery error: {e}")
-        # Return fallback URLs on error
-        fallback_urls = [
-            "https://medium.com/@swift_teacher/ios-interview-questions-and-answers-2024-swift-uikit-swiftui-arc-2d1d2f9f5e8a",
-            "https://medium.com/@avula.koti.realpage/i-asked-50-ios-developers-the-same-architecture-question-their-answers-were-disturbing-df3db9d71565",
-        ]
-        return random.sample(fallback_urls, min(count, len(fallback_urls)))
+        return []
 
 # Background worker
 async def job_worker():
@@ -613,11 +656,16 @@ async def get_stats():
         total_qa = conn.execute('SELECT COUNT(*) FROM qa_pairs').fetchone()[0]
         total_jobs = conn.execute('SELECT COUNT(*) FROM jobs').fetchone()[0]
         completed = conn.execute('SELECT COUNT(*) FROM jobs WHERE status = "completed"').fetchone()[0]
+        failed = conn.execute('SELECT COUNT(*) FROM jobs WHERE status = "failed"').fetchone()[0]
+        unique_urls = conn.execute('SELECT COUNT(DISTINCT url) FROM jobs WHERE status = "completed"').fetchone()[0]
         
         return {
             'total_qa_pairs': total_qa,
             'total_jobs': total_jobs,
             'completed_jobs': completed,
+            'failed_jobs': failed,
+            'unique_articles_processed': unique_urls,
+            'success_rate': f"{(completed / total_jobs * 100):.1f}%" if total_jobs > 0 else "0%",
             'queue_size': job_queue.qsize()
         }
 

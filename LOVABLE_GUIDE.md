@@ -11,9 +11,11 @@
 ## 🚀 Quick Start
 
 ### Step 1: Open Lovable
+
 Go to: **https://lovable.dev**
 
 ### Step 2: Start a New Project
+
 Click "Create New Project"
 
 ### Step 3: Use This Prompt
@@ -55,6 +57,7 @@ and Lucide React for icons.
 ```
 
 ### Step 4: Let Lovable Build
+
 Wait 30-60 seconds and Lovable will generate your entire app!
 
 ---
@@ -62,6 +65,7 @@ Wait 30-60 seconds and Lovable will generate your entire app!
 ## 🎨 App Ideas for Lovable
 
 ### 1. **iOS Interview Prep Dashboard**
+
 ```
 Build an iOS interview preparation dashboard that:
 - Discovers random iOS interview questions daily
@@ -75,6 +79,7 @@ Use my API: https://misleading-aile-personalnikhil-27cb1e20.koyeb.app
 ```
 
 ### 2. **Medium Article Q&A Extractor**
+
 ```
 Create a Medium article analyzer that:
 - Takes any Medium URL
@@ -88,6 +93,7 @@ API: https://misleading-aile-personalnikhil-27cb1e20.koyeb.app
 ```
 
 ### 3. **iOS Knowledge Base Builder**
+
 ```
 Build an iOS knowledge base that:
 - Auto-discovers new iOS articles every hour
@@ -101,6 +107,7 @@ Backend API: https://misleading-aile-personalnikhil-27cb1e20.koyeb.app
 ```
 
 ### 4. **Random iOS Question Generator**
+
 ```
 Create a "Random iOS Interview Question" app:
 - One button: "Get Random Question"
@@ -116,6 +123,7 @@ Base: https://misleading-aile-personalnikhil-27cb1e20.koyeb.app
 ```
 
 ### 5. **iOS Learning Tracker**
+
 ```
 Build a learning progress tracker:
 - Daily random iOS questions
@@ -230,10 +238,10 @@ DESIGN:
 ### Example 1: Discover Random Articles (React)
 
 ```typescript
-import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 
-const API_BASE = 'https://misleading-aile-personalnikhil-27cb1e20.koyeb.app';
+const API_BASE = "https://misleading-aile-personalnikhil-27cb1e20.koyeb.app";
 
 export function DiscoverButton() {
   const [jobIds, setJobIds] = useState<string[]>([]);
@@ -242,7 +250,7 @@ export function DiscoverButton() {
     mutationFn: async (count: number) => {
       const response = await fetch(
         `${API_BASE}/api/scrape/random?count=${count}`,
-        { method: 'POST' }
+        { method: "POST" }
       );
       return response.json();
     },
@@ -253,14 +261,16 @@ export function DiscoverButton() {
 
   return (
     <div>
-      <button 
+      <button
         onClick={() => discoverMutation.mutate(3)}
         disabled={discoverMutation.isPending}
       >
-        {discoverMutation.isPending ? 'Discovering...' : 'Find 3 Random Articles'}
+        {discoverMutation.isPending
+          ? "Discovering..."
+          : "Find 3 Random Articles"}
       </button>
-      
-      {jobIds.map(jobId => (
+
+      {jobIds.map((jobId) => (
         <JobStatus key={jobId} jobId={jobId} />
       ))}
     </div>
@@ -271,21 +281,21 @@ export function DiscoverButton() {
 ### Example 2: Job Status Polling (React)
 
 ```typescript
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
 
-const API_BASE = 'https://misleading-aile-personalnikhil-27cb1e20.koyeb.app';
+const API_BASE = "https://misleading-aile-personalnikhil-27cb1e20.koyeb.app";
 
 export function JobStatus({ jobId }: { jobId: string }) {
   const { data, isLoading } = useQuery({
-    queryKey: ['job', jobId],
+    queryKey: ["job", jobId],
     queryFn: async () => {
       const response = await fetch(`${API_BASE}/api/jobs/${jobId}`);
       return response.json();
     },
     refetchInterval: (data) => {
       // Stop polling when completed or failed
-      return data?.status === 'completed' || data?.status === 'failed' 
-        ? false 
+      return data?.status === "completed" || data?.status === "failed"
+        ? false
         : 2000; // Poll every 2 seconds
     },
   });
@@ -296,7 +306,7 @@ export function JobStatus({ jobId }: { jobId: string }) {
     <div className="p-4 border rounded">
       <p>Status: {data.status}</p>
       <p>Q&A Count: {data.qa_count}</p>
-      {data.status === 'completed' && (
+      {data.status === "completed" && (
         <button onClick={() => viewResults(jobId)}>View Results</button>
       )}
     </div>
@@ -307,16 +317,16 @@ export function JobStatus({ jobId }: { jobId: string }) {
 ### Example 3: Browse All Q&A (React)
 
 ```typescript
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
 
-const API_BASE = 'https://misleading-aile-personalnikhil-27cb1e20.koyeb.app';
+const API_BASE = "https://misleading-aile-personalnikhil-27cb1e20.koyeb.app";
 
 export function QABrowser() {
   const [page, setPage] = useState(0);
   const limit = 50;
 
   const { data, isLoading } = useQuery({
-    queryKey: ['qa', page],
+    queryKey: ["qa", page],
     queryFn: async () => {
       const response = await fetch(
         `${API_BASE}/api/qa?limit=${limit}&offset=${page * limit}`
@@ -330,13 +340,13 @@ export function QABrowser() {
   return (
     <div>
       <h1>iOS Interview Questions</h1>
-      
+
       {data.qa_pairs.map((qa: any, idx: number) => (
         <div key={idx} className="border p-4 rounded mb-4">
           <h3 className="font-bold text-lg">Q: {qa.question}</h3>
           <p className="mt-2 text-gray-700">A: {qa.answer}</p>
-          <a 
-            href={qa.source_url} 
+          <a
+            href={qa.source_url}
             target="_blank"
             className="text-blue-500 text-sm mt-2 block"
           >
@@ -346,16 +356,14 @@ export function QABrowser() {
       ))}
 
       <div className="flex gap-4 mt-6">
-        <button 
-          onClick={() => setPage(p => Math.max(0, p - 1))}
+        <button
+          onClick={() => setPage((p) => Math.max(0, p - 1))}
           disabled={page === 0}
         >
           Previous
         </button>
         <span>Page {page + 1}</span>
-        <button onClick={() => setPage(p => p + 1)}>
-          Next
-        </button>
+        <button onClick={() => setPage((p) => p + 1)}>Next</button>
       </div>
 
       <p className="text-sm text-gray-500 mt-4">
@@ -373,12 +381,15 @@ export function QABrowser() {
 ### Tutorial: Build "iOS Q&A Explorer" in 5 Minutes
 
 #### Step 1: Create Project (30 seconds)
+
 1. Go to https://lovable.dev
 2. Click "New Project"
 3. Name it "iOS Q&A Explorer"
 
 #### Step 2: Main Prompt (1 minute)
+
 Paste this:
+
 ```
 Build an iOS Q&A Explorer with:
 
@@ -404,14 +415,18 @@ Use Tailwind CSS, Lucide icons, React Query
 ```
 
 #### Step 3: Wait for Generation (30 seconds)
+
 Lovable will generate the complete app with:
+
 - Multiple pages
 - API integration
 - Routing
 - Styling
 
 #### Step 4: Customize (2 minutes)
+
 Tell Lovable:
+
 ```
 Make these changes:
 1. Add dark mode toggle in header
@@ -421,6 +436,7 @@ Make these changes:
 ```
 
 #### Step 5: Deploy (1 minute)
+
 1. Click "Deploy" in Lovable
 2. Get a live URL instantly
 3. Share with friends!
@@ -432,12 +448,14 @@ Make these changes:
 ## 💡 Pro Tips for Lovable
 
 ### Tip 1: Use React Query for API Calls
+
 ```
 "Use React Query for all API calls to my backend at
 https://misleading-aile-personalnikhil-27cb1e20.koyeb.app"
 ```
 
 ### Tip 2: Request Specific Libraries
+
 ```
 "Use these libraries:
 - @tanstack/react-query for data fetching
@@ -447,11 +465,13 @@ https://misleading-aile-personalnikhil-27cb1e20.koyeb.app"
 ```
 
 ### Tip 3: Specify Mobile-First
+
 ```
 "Make it mobile-first responsive with Tailwind CSS breakpoints"
 ```
 
 ### Tip 4: Add Polish Features
+
 ```
 "Add these polish features:
 - Loading skeletons
@@ -462,7 +482,9 @@ https://misleading-aile-personalnikhil-27cb1e20.koyeb.app"
 ```
 
 ### Tip 5: Iterate Quickly
+
 After initial build, ask for changes:
+
 ```
 "Add a sidebar navigation"
 "Make cards have shadows and hover effects"
@@ -477,6 +499,7 @@ After initial build, ask for changes:
 ### Color Schemes
 
 **Option 1: iOS Blue**
+
 ```
 Primary: #007AFF (iOS Blue)
 Secondary: #5856D6 (iOS Purple)
@@ -484,6 +507,7 @@ Background: #F2F2F7 (Light Gray)
 ```
 
 **Option 2: Modern Purple**
+
 ```
 Primary: #8B5CF6 (Vivid Purple)
 Secondary: #EC4899 (Pink)
@@ -491,6 +515,7 @@ Background: #1F2937 (Dark)
 ```
 
 **Option 3: Professional**
+
 ```
 Primary: #2563EB (Blue)
 Secondary: #10B981 (Green)
@@ -500,6 +525,7 @@ Background: #FFFFFF (White)
 ### Layout Ideas
 
 **Layout 1: Dashboard**
+
 ```
 ┌─────────────────────────────────┐
 │  Header (Logo, Nav, Stats)      │
@@ -513,6 +539,7 @@ Background: #FFFFFF (White)
 ```
 
 **Layout 2: Single Page**
+
 ```
 ┌─────────────────────────────────┐
 │  Hero Section                    │
@@ -526,6 +553,7 @@ Background: #FFFFFF (White)
 ```
 
 **Layout 3: Flashcard**
+
 ```
 ┌─────────────────────────────────┐
 │         Question 3/10            │
@@ -543,6 +571,7 @@ Background: #FFFFFF (White)
 ## 🔗 Complete Lovable Prompts Library
 
 ### Beginner: Simple Q&A Viewer
+
 ```
 Create a simple iOS Q&A viewer:
 - Single page
@@ -553,6 +582,7 @@ Create a simple iOS Q&A viewer:
 ```
 
 ### Intermediate: Multi-Page App
+
 ```
 Build a multi-page iOS Q&A app:
 
@@ -572,6 +602,7 @@ API: https://misleading-aile-personalnikhil-27cb1e20.koyeb.app
 ```
 
 ### Advanced: Full Dashboard
+
 ```
 Create a comprehensive iOS Q&A dashboard with:
 
@@ -610,24 +641,29 @@ API: https://misleading-aile-personalnikhil-27cb1e20.koyeb.app
 ## 🐛 Troubleshooting
 
 ### Issue 1: CORS Errors
+
 If you see CORS errors, tell Lovable:
+
 ```
 "Handle CORS by adding mode: 'cors' to all fetch requests"
 ```
 
 ### Issue 2: Polling Not Working
+
 ```
 "Use React Query's refetchInterval to poll job status every 2 seconds
 until status is 'completed' or 'failed'"
 ```
 
 ### Issue 3: Slow Loading
+
 ```
 "Add loading skeletons using Shadcn UI skeleton components
 while data is fetching"
 ```
 
 ### Issue 4: Mobile Issues
+
 ```
 "Fix mobile layout: make cards stack vertically on small screens
 and use Tailwind breakpoints: sm:, md:, lg:"
@@ -640,10 +676,12 @@ and use Tailwind breakpoints: sm:, md:, lg:"
 Once your Lovable app is built:
 
 1. **Lovable Hosting** (Instant)
+
    - Click "Deploy" in Lovable
    - Get a free `.lovable.app` URL
 
 2. **Vercel** (Recommended)
+
    - Export from Lovable
    - Push to GitHub
    - Deploy to Vercel
@@ -656,16 +694,16 @@ Once your Lovable app is built:
 
 ## 🎯 Example Apps You Can Build
 
-| App Name | Description | Difficulty |
-|----------|-------------|-----------|
-| Q&A Flashcards | Study iOS questions | Beginner |
-| Random Question Generator | One-click random Q&A | Beginner |
-| Q&A Browser | Browse all questions | Beginner |
-| Interview Prep Dashboard | Track study progress | Intermediate |
-| Article Scraper UI | Submit URLs, track jobs | Intermediate |
-| Knowledge Base | Full-featured app | Advanced |
-| Analytics Dashboard | Visualize Q&A data | Advanced |
-| Social Q&A Platform | Share, comment, upvote | Advanced |
+| App Name                  | Description             | Difficulty   |
+| ------------------------- | ----------------------- | ------------ |
+| Q&A Flashcards            | Study iOS questions     | Beginner     |
+| Random Question Generator | One-click random Q&A    | Beginner     |
+| Q&A Browser               | Browse all questions    | Beginner     |
+| Interview Prep Dashboard  | Track study progress    | Intermediate |
+| Article Scraper UI        | Submit URLs, track jobs | Intermediate |
+| Knowledge Base            | Full-featured app       | Advanced     |
+| Analytics Dashboard       | Visualize Q&A data      | Advanced     |
+| Social Q&A Platform       | Share, comment, upvote  | Advanced     |
 
 ---
 
@@ -694,8 +732,9 @@ Once your Lovable app is built:
 ## 💬 Example Conversation with Lovable
 
 **You:**
+
 ```
-Build an iOS Q&A app using my API at 
+Build an iOS Q&A app using my API at
 https://misleading-aile-personalnikhil-27cb1e20.koyeb.app
 
 Features:
@@ -705,28 +744,31 @@ Features:
 - Dark mode
 ```
 
-**Lovable:** ✅ *Generates complete app*
+**Lovable:** ✅ _Generates complete app_
 
 **You:**
+
 ```
 Add a search bar to filter questions
 ```
 
-**Lovable:** ✅ *Adds search functionality*
+**Lovable:** ✅ _Adds search functionality_
 
 **You:**
+
 ```
 Make cards have hover animations and shadows
 ```
 
-**Lovable:** ✅ *Adds animations*
+**Lovable:** ✅ _Adds animations_
 
 **You:**
+
 ```
 Add "Copy to Clipboard" button for each Q&A
 ```
 
-**Lovable:** ✅ *Adds copy buttons*
+**Lovable:** ✅ _Adds copy buttons_
 
 **That's it! Your app is ready in minutes!** 🎉
 
@@ -741,4 +783,3 @@ Add "Copy to Clipboard" button for each Q&A
 **Swagger Docs:** https://misleading-aile-personalnikhil-27cb1e20.koyeb.app/docs
 
 **Happy building!** 💜✨
-
