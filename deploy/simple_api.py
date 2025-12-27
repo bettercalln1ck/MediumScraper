@@ -117,16 +117,12 @@ async def process_job(job_id: str, url: str):
         
         # Scrape with Firecrawl
         app_fc = FirecrawlApp(api_key=FIRECRAWL_API_KEY)
-        result = app_fc.scrape(url, formats=['markdown'])
+        result = app_fc.scrape_url(url, params={'formats': ['markdown']})
         
-        if not result:
-            raise Exception("Failed to scrape")
+        if not result or 'markdown' not in result:
+            raise Exception("Failed to scrape or no content returned")
         
-        content = None
-        if hasattr(result, 'markdown'):
-            content = result.markdown
-        elif hasattr(result, 'content'):
-            content = result.content
+        content = result.get('markdown', '') or result.get('content', '')
         
         if not content:
             raise Exception("No content extracted")
